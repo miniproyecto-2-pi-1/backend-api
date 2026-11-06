@@ -9,6 +9,20 @@ function required(name: string): string {
   return value;
 }
 
+// La clave privada de la service account llega de muchas formas según dónde se pegue
+// (Render, .env, docker --env-file): con comillas, con "\n" literales o doblemente escapados,
+// con saltos de línea reales, con espacios o sin las líneas BEGIN/END. Aquí se limpia todo y se
+// reconstruye un PEM válido: se toma solo el cuerpo base64 y se vuelve a partir en líneas de 64.
+function normalizePrivateKey(raw: string): string {
+  const body = raw
+    .replace(/\\+n/g, "\n") // "\n" literal (también "\\n") -> salto de línea
+    .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----/g, "")
+    .replace(/-----END [A-Z ]*PRIVATE KEY-----/g, "")
+    .replace(/["'\s]/g, ""); // comillas, espacios y saltos de línea
+  const lines = body.match(/.{1,64}/g) ?? [];
+  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----\n`;
+}
+
 export const env = {
   port: Number(process.env.PORT ?? 3000),
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -20,12 +34,8 @@ export const env = {
   firebase: {
     projectId: required("FIREBASE_PROJECT_ID"),
     clientEmail: required("FIREBASE_CLIENT_EMAIL"),
-    // `docker run --env-file` NO quita las comillas del .env (Node y docker compose sí);
-    // se quitan aquí para que funcione igual en los tres casos.
-    // Además, los .env y Render guardan los saltos de línea como "\n" literales; aquí se restauran.
-    privateKey: required("FIREBASE_PRIVATE_KEY")
-      .replace(/^["']|["']$/g, "")
-      .replace(/\\n/g, "\n"),
+    // Ver normalizePrivateKey: acepta la clave pegada de cualquiera de las formas habituales.
+    privateKey: normalizePrivateKey(required("FIREBASE_PRIVATE_KEY")),
   },
   // Tiempo máximo de espera a Firestore antes de responder 503.
   firestoreTimeoutMs: Number(process.env.FIRESTORE_TIMEOUT_MS ?? 5000),
