@@ -91,6 +91,9 @@ Abrir <http://localhost:3000/api-docs>.
 2. **Runtime: Docker** (Render detecta el `Dockerfile`).
 3. En *Environment* agregar `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` y `CORS_ORIGINS` con la URL de Vercel.
 4. **Health Check Path**: `/health`.
+5. **Despliegue continuo:** con *Auto-Deploy* en *On Commit*, cada integración a `main` construye y despliega la versión nueva sola. Se comprueba en *Deploys*: la columna *Trigger* debe mostrar el commit nuevo, no *Manual*.
+6. **NODE_ENV:** en Render debe valer `production`.
+URL publicada: <https://backend-api-ygz0.onrender.com> · Swagger: <https://backend-api-ygz0.onrender.com/api-docs/>
 
 ## Reglas de Firestore
 
