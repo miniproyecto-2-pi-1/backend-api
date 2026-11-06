@@ -1,0 +1,32 @@
+{
+  "name": "backend-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API principal del Salón de Estudio Colaborativo (Mini-proyecto 2). Node.js + TypeScript + Firestore.",
+  "type": "module",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "firebase-admin": "^14.0.0",
+    "helmet": "^8.1.0",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/swagger-ui-express": "^4.1.6",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
+  }
+}

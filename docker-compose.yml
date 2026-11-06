@@ -1,0 +1,40 @@
+# Levanta TODO el sistema con: docker compose up --build   (desde la raíz de este repo)
+#
+# Frontend y backends viven en repositorios distintos. Para que este archivo los encuentre,
+# clónalos uno al lado del otro, dentro de una misma carpeta:
+#
+#   salon-estudio/
+#   ├── backend-api/        ← este repo (aquí está este archivo)
+#   ├── frontend/           ← repo del frontend (React + Vite, con su propio Dockerfile)
+#   └── backend-realtime/   ← repo del servidor de tiempo real (Sprint 2)
+#
+# Si en GitHub los repos tienen otro nombre, clónalos con el nombre de carpeta de arriba:
+#   git clone <url-del-frontend> frontend
+
+services:
+  backend-api:
+    build: .
+    env_file: .env
+    environment:
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # Vite incrusta las variables VITE_* en tiempo de build.
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend-api
+
+  # backend-realtime:          # Sprint 2 (TS-02)
+  #   build: ../backend-realtime
+  #   env_file: ../backend-realtime/.env
+  #   ports:
+  #     - "4000:4000"

@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.json.key
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+.git
+README.md
+docker-compose.yml

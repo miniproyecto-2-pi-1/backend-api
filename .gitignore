@@ -1,0 +1,14 @@
+node_modules/
+dist/
+
+# Variables de entorno reales: NUNCA al repositorio
+.env
+.env.*
+!.env.example
+
+# Credenciales de Firebase (service account): NUNCA al repositorio
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+
+*.log
+.DS_Store
