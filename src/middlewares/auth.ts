@@ -37,27 +37,22 @@ export async function requireAuth(
 
   try {
     const token = header.slice(7).trim();
-
     const decoded = await getAuth().verifyIdToken(token);
 
     req.uid = decoded.uid;
     req.authEmail = decoded.email;
     req.authName = decoded.name;
     req.authPhoto = decoded.picture;
+    req.authProvider = decoded.firebase.sign_in_provider;
+  } catch {
+    throw new AppError(
+      401,
+      "Token inválido o expirado.",
+      "INVALID_TOKEN"
+    );
+  }
 
-    req.authProvider =
-      decoded.firebase.sign_in_provider;
-
-    next();
-  } catch (error) {
-  console.error("ERROR REAL DE FIREBASE:", error);
-
-  throw new AppError(
-    401,
-    "Token inválido o expirado.",
-    "INVALID_TOKEN"
-  );
-}
+  next();
 }
 
 export function requireGoogle(
