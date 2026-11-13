@@ -24,9 +24,10 @@ export const openApiSpec = {
       "API principal del Mini-proyecto 2 (750018C, Univalle). Lee y escribe en Firestore; el frontend nunca consulta Firestore directamente.",
   },
   tags: [
-    { name: "Sistema", description: "Estado del servicio" },
-    { name: "Base técnica", description: "TS-00: dato de prueba end-to-end" },
-  ],
+  { name: "Sistema", description: "Estado del servicio" },
+  { name: "Base técnica", description: "TS-00: dato de prueba end-to-end" },
+  { name: "Usuarios", description: "Autenticación y perfiles de usuario" },
+],
   paths: {
     "/health": {
       get: {
@@ -95,6 +96,98 @@ export const openApiSpec = {
             },
           },
         },
+      },
+    },
+    "/api/v1/auth/email/profile": {
+      post: {
+        tags: ["Usuarios"],
+        summary: "Crear perfil de usuario con correo",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "201": {
+            description: "Perfil creado correctamente",
+          },
+          "401": {
+            description: "Token inválido o ausente",
+          },
+        },
+      },
+    },
+
+    "/api/v1/auth/google/profile": {
+      post: {
+        tags: ["Usuarios"],
+        summary: "Crear o actualizar perfil Google",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Perfil guardado correctamente",
+          },
+          "401": {
+            description: "Token inválido o ausente",
+          },
+        },
+      },
+    },
+
+    "/api/v1/auth/me": {
+      get: {
+        tags: ["Usuarios"],
+        summary: "Consultar perfil del usuario autenticado",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Perfil encontrado",
+          },
+          "404": {
+            description: "Perfil no encontrado",
+          },
+        },
+      },
+    },
+
+    "/api/v1/auth/username": {
+      put: {
+        tags: ["Usuarios"],
+        summary: "Asignar username único",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["username"],
+                properties: {
+                  username: {
+                    type: "string",
+                    example: "andres123",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Username asignado correctamente",
+          },
+          "400": {
+            description: "Username inválido",
+          },
+          "409": {
+            description: "Username ocupado",
+          },
+        },
+      },
+    },
+  },
+    components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
       },
     },
   },
