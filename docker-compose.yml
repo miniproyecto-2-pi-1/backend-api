@@ -11,6 +11,7 @@
 # Si en GitHub los repos tienen otro nombre, clónalos con el nombre de carpeta de arriba:
 #   git clone <url-del-frontend> frontend
 
+
 services:
   backend-api:
     build: .
@@ -26,12 +27,16 @@ services:
     build:
       context: ../frontend
       args:
-        # Vite incrusta las variables VITE_* en tiempo de build.
         VITE_API_URL: http://localhost:3000
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
     ports:
       - "5173:80"
     depends_on:
       - backend-api
+
 
   # backend-realtime:          # Sprint 2 (TS-02)
   #   build: ../backend-realtime
