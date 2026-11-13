@@ -1,5 +1,10 @@
 
-import type { NextFunction, Request, Response } from "express";
+import type {
+  NextFunction,
+  Request,
+  Response,
+} from "express";
+
 import { getAuth } from "firebase-admin/auth";
 import { AppError } from "../errors/AppError.js";
 
@@ -10,6 +15,7 @@ declare global {
       authEmail?: string;
       authName?: string;
       authPhoto?: string;
+      authProvider?: string;
     }
   }
 }
@@ -39,12 +45,33 @@ export async function requireAuth(
     req.authName = decoded.name;
     req.authPhoto = decoded.picture;
 
+    req.authProvider =
+      decoded.firebase.sign_in_provider;
+
     next();
-  } catch {
+  } catch (error) {
+  console.error("ERROR REAL DE FIREBASE:", error);
+
+  throw new AppError(
+    401,
+    "Token inválido o expirado.",
+    "INVALID_TOKEN"
+  );
+}
+}
+
+export function requireGoogle(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (req.authProvider !== "google.com") {
     throw new AppError(
-      401,
-      "Token inválido o expirado.",
-      "INVALID_TOKEN"
+      403,
+      "Debes iniciar sesión con Google.",
+      "GOOGLE_AUTH_REQUIRED"
     );
   }
+
+  next();
 }

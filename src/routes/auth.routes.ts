@@ -8,13 +8,17 @@ import {
   updateUsername,
 } from "../controllers/auth.controller.js";
 
-import { requireAuth } from "../middlewares/auth.js";
+import {
+  requireAuth,
+  requireGoogle,
+} from "../middlewares/auth.js";
 
 export const authRouter = Router();
 
 authRouter.post(
   "/google/profile",
   requireAuth,
+  requireGoogle,
   registerGoogle
 );
 
