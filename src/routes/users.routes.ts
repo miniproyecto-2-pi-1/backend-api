@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import type { Request } from "express";
 import { db } from "../config/firebase.js";
