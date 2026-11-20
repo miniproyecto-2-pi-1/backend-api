@@ -67,6 +67,25 @@ const userInputSchema = {
   },
 };
 
+const roomInputSchema = {
+  type: "object",
+  required: ["nombre"],
+  properties: {
+    nombre: { type: "string", minLength: 1, maxLength: 50, example: "Cálculo II" },
+  },
+};
+
+const roomSchema = {
+  type: "object",
+  required: ["id", "nombre", "creadaEn", "esAdministrador"],
+  properties: {
+    id: { type: "string", example: "K7P2-91XQ" },
+    nombre: { type: "string", example: "Cálculo II" },
+    creadaEn: { type: "string", format: "date-time" },
+    esAdministrador: { type: "boolean", description: "true si quien consulta creó la sala" },
+  },
+};
+
 const bearerSecurity = [{ bearerAuth: [] }];
 const jsonResponse = (description: string, schema: object) => ({
   description,
@@ -84,6 +103,7 @@ export const openApiSpec = {
     { name: "Sistema", description: "Estado del servicio" },
     { name: "Base técnica", description: "TS-00: dato de prueba end-to-end" },
     { name: "Usuarios", description: "Autenticación y perfiles de usuario" },
+    { name: "Salas", description: "Crear salas y ver las propias (US-06)" },
   ],
   paths: {
     "/health": {
@@ -227,6 +247,52 @@ export const openApiSpec = {
           "401": errorResponse("Token inválido, ausente o sin correo"),
           "403": errorResponse("El token no corresponde a Google (GOOGLE_AUTH_REQUIRED)"),
           "409": errorResponse("Username ocupado o ya asignado (USERNAME_TAKEN / USERNAME_ALREADY_SET)"),
+        },
+      },
+    },
+    "/api/v1/rooms": {
+      post: {
+        tags: ["Salas"],
+        summary: "Crear una sala (US-06)",
+        description: "Crea una sala con un ID único y corto (por ejemplo `K7P2-91XQ`). Quien la crea queda como administrador. Requiere sesión y el perfil completo.",
+        security: bearerSecurity,
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: roomInputSchema } },
+        },
+        responses: {
+          "201": jsonResponse("Sala creada", roomSchema),
+          "400": errorResponse("Nombre vacío o de más de 50 caracteres (VALIDATION); incluye error.fields.nombre"),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
+        },
+      },
+      get: {
+        tags: ["Salas"],
+        summary: "Listar mis salas (US-06)",
+        description: "Devuelve solo las salas que creó la persona con la sesión iniciada, las más nuevas primero. Si no tiene ninguna, devuelve una lista vacía.",
+        security: bearerSecurity,
+        responses: {
+          "200": jsonResponse("Lista de salas", { type: "array", items: roomSchema }),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
+        },
+      },
+    },
+    "/api/v1/rooms/{id}": {
+      get: {
+        tags: ["Salas"],
+        summary: "Consultar una sala por su ID",
+        description: "Sirve para comprobar que una sala existe antes de entrar. El ID se acepta en mayúsculas o minúsculas.",
+        security: bearerSecurity,
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", example: "K7P2-91XQ" } },
+        ],
+        responses: {
+          "200": jsonResponse("La sala", roomSchema),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
+          "404": errorResponse("Sala no encontrada (ROOM_NOT_FOUND)"),
         },
       },
     },
