@@ -184,6 +184,16 @@ export const openApiSpec = {
       },
     },
     "/api/v1/users/me": {
+      delete: {
+        tags: ["Usuarios"],
+        summary: "Eliminar la cuenta (US-05)",
+        description: "Borra el perfil, libera el username, borra las salas que la persona creó (con sus mensajes) y elimina la cuenta de Firebase Auth. Es definitivo. El frontend debe pedir confirmación antes de llamarla.",
+        security: bearerSecurity,
+        responses: {
+          "204": { description: "Cuenta eliminada" },
+          "401": errorResponse("Token inválido o ausente"),
+        },
+      },
       get: {
         tags: ["Usuarios"],
         summary: "Consultar datos del usuario para el frontend",
