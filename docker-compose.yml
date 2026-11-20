@@ -36,10 +36,16 @@ services:
       - "5173:80"
     depends_on:
       - backend-api
+      - backend-realtime
 
 
-  # backend-realtime:          # Sprint 2 (TS-02)
-  #   build: ../backend-realtime
-  #   env_file: ../backend-realtime/.env
-  #   ports:
-  #     - "4000:4000"
+  # Servidor de tiempo real (chat y presencia con Socket.io). Sprint 2 (TS-02).
+  backend-realtime:
+    build: ../backend-realtime
+    env_file: ../backend-realtime/.env
+    environment:
+      PORT: 4000
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
