@@ -3,6 +3,7 @@
 
 import { Router } from "express";
 import { baseTecnicaRouter } from "./baseTecnica.routes.js";
+import { roomsRouter } from "./rooms.routes.js";
 import { authRouter } from "./auth.routes.js";
 import { usersRouter } from "./users.routes.js";
 import { cuentaRouter } from "./cuenta.routes.js";
@@ -10,6 +11,7 @@ import { cuentaRouter } from "./cuenta.routes.js";
 export const apiRouter = Router();
 
 apiRouter.use("/base-tecnica", baseTecnicaRouter);
+apiRouter.use("/rooms", roomsRouter);
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/users", cuentaRouter); // DELETE /users/me (eliminar cuenta)
