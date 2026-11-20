@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request } from "express";
 import { db } from "../config/firebase.js";
 import { AppError } from "../errors/AppError.js";
+import { getAuth } from "firebase-admin/auth";
 import { requireAuth } from "../middlewares/auth.js";
 
 export const usersRouter = Router();
@@ -255,4 +256,123 @@ usersRouter.post("/me/username", async (req, res) => {
   );
 
   res.status(resultado.status).json(resultado.usuario);
+});
+
+// ---------------------------------------------------------------------------
+// US-04: editar el perfil
+// ---------------------------------------------------------------------------
+
+// El correo es opcional al editar: si no viene, se deja el que ya tiene.
+// Devuelve el correo en minúsculas, o undefined si no se mandó.
+function validarCorreo(body: unknown): string | undefined {
+  const crudo = (body as { correo?: unknown } | null)?.correo;
+
+  if (crudo === undefined || crudo === "") return undefined;
+
+  const correo = typeof crudo === "string" ? crudo.trim().toLowerCase() : "";
+  const esValido = correo.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+
+  if (!esValido) {
+    const error = new AppError(400, "Revisa los campos marcados.", "VALIDATION");
+    Object.assign(error, { fields: { correo: "Escribe un correo válido." } });
+    throw error;
+  }
+
+  return correo;
+}
+
+// Paso 1 del cambio de correo: comprueba que sea posible y que nadie más lo use.
+async function revisarCambioDeCorreo(req: Request, correoNuevo: string) {
+  // Con Google el correo lo manda Google: no se puede cambiar desde aquí.
+  if (req.authProvider !== "password") {
+    throw new AppError(
+      403,
+      "Con una cuenta de Google no se puede cambiar el correo.",
+      "EMAIL_CHANGE_NOT_ALLOWED"
+    );
+  }
+
+  try {
+    const otraPersona = await getAuth().getUserByEmail(correoNuevo);
+    if (otraPersona.uid !== req.uid) {
+      throw new AppError(409, "Ese correo ya está registrado. Usa otro.", "EMAIL_TAKEN");
+    }
+  } catch (error) {
+    // "No existe nadie con ese correo" es lo que queremos: el correo está libre.
+    const noExiste = (error as { code?: string }).code === "auth/user-not-found";
+    if (!noExiste) throw error;
+  }
+}
+
+// PATCH /api/v1/users/me  → edita nombres, apellidos, avatar, username y (opcional) correo
+usersRouter.patch("/me", async (req, res) => {
+  if (!req.uid) {
+    throw new AppError(401, "Debes iniciar sesión.", "UNAUTHENTICATED");
+  }
+
+  const uid = req.uid;
+  const datos = validarPerfil(req.body);
+  const correoNuevo = validarCorreo(req.body);
+
+  const userRef = db.collection("users").doc(uid);
+  const usernameNuevoRef = db.collection("usernames").doc(datos.username.toLowerCase());
+
+  const antes = (await userRef.get()).data();
+  if (!antes?.username) {
+    throw new AppError(404, "Primero completa tu perfil.", "PROFILE_INCOMPLETE");
+  }
+
+  const cambiaElCorreo = correoNuevo !== undefined && correoNuevo !== antes.email;
+  if (cambiaElCorreo) {
+    await revisarCambioDeCorreo(req, correoNuevo);
+  }
+
+  // Paso 2: guardar en Firestore. Todo ocurre junto: o se guarda todo o no se guarda nada.
+  const perfil = await db.runTransaction(async (tx) => {
+    const usuario = (await tx.get(userRef)).data() ?? {};
+    const usernameNuevo = await tx.get(usernameNuevoRef);
+
+    // El username nuevo no puede ser de otra persona.
+    if (usernameNuevo.exists && usernameNuevo.data()?.uid !== uid) {
+      throw new AppError(409, "Ese nombre de usuario ya existe. Elige otro.", "USERNAME_TAKEN");
+    }
+
+    // Si cambió de username, se libera el anterior y se reserva el nuevo.
+    const usernameAnterior = String(usuario.username).toLowerCase();
+    if (usernameAnterior !== usernameNuevoRef.id) {
+      tx.delete(db.collection("usernames").doc(usernameAnterior));
+      tx.set(usernameNuevoRef, { uid, username: usernameNuevoRef.id });
+    }
+
+    const actualizado = {
+      ...usuario,
+      nombres: datos.nombres,
+      apellidos: datos.apellidos,
+      displayName: `${datos.nombres} ${datos.apellidos}`,
+      username: usernameNuevoRef.id,
+      avatar: datos.avatar,
+      email: cambiaElCorreo ? correoNuevo : usuario.email,
+      updatedAt: new Date().toISOString()
+    };
+
+    tx.set(userRef, actualizado);
+    return actualizado;
+  });
+
+  // Paso 3: si cambió el correo, también se cambia en Firebase Auth (el que usa para ingresar).
+  if (cambiaElCorreo) {
+    try {
+      await getAuth().updateUser(uid, { email: correoNuevo });
+    } catch (error) {
+      // Si falla, se deja el correo anterior en Firestore para que no queden dos distintos.
+      await userRef.update({ email: antes.email });
+      const yaExiste = (error as { code?: string }).code === "auth/email-already-exists";
+      if (yaExiste) {
+        throw new AppError(409, "Ese correo ya está registrado. Usa otro.", "EMAIL_TAKEN");
+      }
+      throw error;
+    }
+  }
+
+  res.status(200).json(usuarioFrontend(uid, perfil));
 });

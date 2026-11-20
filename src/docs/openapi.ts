@@ -195,6 +195,34 @@ export const openApiSpec = {
           "404": errorResponse("Perfil sin username (PROFILE_INCOMPLETE)"),
         },
       },
+      patch: {
+        tags: ["Usuarios"],
+        summary: "Editar el perfil (US-04)",
+        description: "Edita nombres, apellidos, avatar y username. El correo es opcional: si se envía y es distinto, se cambia en Firebase Auth y en Firestore (solo para cuentas con correo y contraseña; con Google no se puede). El username y el correo no pueden ser de otra persona.",
+        security: bearerSecurity,
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                ...userInputSchema,
+                properties: {
+                  ...userInputSchema.properties,
+                  correo: { type: "string", format: "email", example: "nuevo@correo.com" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": jsonResponse("Perfil actualizado", frontendUserSchema),
+          "400": errorResponse("Datos inválidos (VALIDATION); puede incluir error.fields"),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Cuenta de Google: no se puede cambiar el correo (EMAIL_CHANGE_NOT_ALLOWED)"),
+          "404": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
+          "409": errorResponse("Username o correo ya usados por otra persona (USERNAME_TAKEN / EMAIL_TAKEN)"),
+        },
+      },
     },
     "/api/v1/users": {
       post: {
