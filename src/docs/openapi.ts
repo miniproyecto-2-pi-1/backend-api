@@ -77,12 +77,25 @@ const roomInputSchema = {
 
 const roomSchema = {
   type: "object",
-  required: ["id", "nombre", "creadaEn", "esAdministrador"],
+  required: ["id", "nombre", "creadaEn", "esAdministrador", "anfitrionUid"],
   properties: {
     id: { type: "string", example: "K7P2-91XQ" },
     nombre: { type: "string", example: "Cálculo II" },
     creadaEn: { type: "string", format: "date-time" },
     esAdministrador: { type: "boolean", description: "true si quien consulta creó la sala" },
+    anfitrionUid: { type: "string", description: "UID de quien creó la sala" },
+  },
+};
+
+const mensajeSchema = {
+  type: "object",
+  required: ["id", "uid", "username", "texto", "creadoEn"],
+  properties: {
+    id: { type: "string" },
+    uid: { type: "string" },
+    username: { type: "string" },
+    texto: { type: "string" },
+    creadoEn: { type: "string", format: "date-time" },
   },
 };
 
@@ -103,7 +116,7 @@ export const openApiSpec = {
     { name: "Sistema", description: "Estado del servicio" },
     { name: "Base técnica", description: "TS-00: dato de prueba end-to-end" },
     { name: "Usuarios", description: "Autenticación y perfiles de usuario" },
-    { name: "Salas", description: "Crear salas y ver las propias (US-06)" },
+    { name: "Salas", description: "Crear, consultar, editar y eliminar salas; consultar el historial del chat" },
   ],
   paths: {
     "/health": {
@@ -328,6 +341,68 @@ export const openApiSpec = {
         ],
         responses: {
           "200": jsonResponse("La sala", roomSchema),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
+          "404": errorResponse("Sala no encontrada (ROOM_NOT_FOUND)"),
+        },
+      },
+      patch: {
+        tags: ["Salas"],
+        summary: "Editar el nombre de una sala (US-07)",
+        description: "Solo el anfitrión puede cambiar el nombre. El ID, la fecha de creación y el anfitrión no cambian.",
+        security: bearerSecurity,
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", example: "K7P2-91XQ" } },
+        ],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: roomInputSchema } },
+        },
+        responses: {
+          "200": jsonResponse("Sala actualizada", roomSchema),
+          "400": errorResponse("Nombre inválido (VALIDATION); incluye error.fields.nombre"),
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar o usuario no anfitrión (PROFILE_INCOMPLETE / FORBIDDEN)"),
+          "404": errorResponse("Sala no encontrada (ROOM_NOT_FOUND)"),
+        },
+      },
+      delete: {
+        tags: ["Salas"],
+        summary: "Eliminar una sala y su chat (US-07)",
+        description: "Solo el anfitrión puede eliminarla. También se borran los mensajes guardados en la subcolección.",
+        security: bearerSecurity,
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", example: "K7P2-91XQ" } },
+        ],
+        responses: {
+          "204": { description: "Sala y mensajes eliminados" },
+          "401": errorResponse("Token inválido o ausente"),
+          "403": errorResponse("Perfil sin completar o usuario no anfitrión (PROFILE_INCOMPLETE / FORBIDDEN)"),
+          "404": errorResponse("Sala no encontrada (ROOM_NOT_FOUND)"),
+        },
+      },
+    },
+    "/api/v1/rooms/{id}/messages": {
+      get: {
+        tags: ["Salas"],
+        summary: "Consultar el historial de mensajes (US-11)",
+        description: "Devuelve como máximo 100 mensajes ordenados del más viejo al más nuevo. Sin `antes`, empieza por los más recientes; con `antes`, devuelve mensajes anteriores a esa fecha.",
+        security: bearerSecurity,
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", example: "K7P2-91XQ" } },
+          { name: "limite", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 50 } },
+          { name: "antes", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+        ],
+        responses: {
+          "200": jsonResponse("Página del historial", {
+            type: "object",
+            required: ["mensajes", "hayMas"],
+            properties: {
+              mensajes: { type: "array", items: mensajeSchema },
+              hayMas: { type: "boolean", description: "true si hay mensajes anteriores a esta página" },
+            },
+          }),
+          "400": errorResponse("Fecha o límite inválido (VALIDATION)"),
           "401": errorResponse("Token inválido o ausente"),
           "403": errorResponse("Perfil sin completar (PROFILE_INCOMPLETE)"),
           "404": errorResponse("Sala no encontrada (ROOM_NOT_FOUND)"),
